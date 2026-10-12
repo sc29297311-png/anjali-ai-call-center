@@ -1,110 +1,105 @@
+
 <!DOCTYPE html>
 <html lang="hi">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Anjali AI Call - Jabalpur Life RP</title>
+<title>Anjali AI Call - Fixed</title>
 <style>
 body{background:#0f0f0f;color:white;font-family:system-ui;text-align:center;padding:20px}
 .card{background:#1e1e1e;padding:25px;border-radius:20px;max-width:400px;margin:auto;box-shadow:0 0 20px #ff2a6d33}
 button{width:100%;padding:18px;font-size:20px;background:#ff2a6d;color:white;border:none;border-radius:12px;margin-top:15px}
-#log{margin-top:15px;background:#000;padding:10px;border-radius:10px;min-height:80px;text-align:left;font-size:14px}
-.ad{margin:15px 0;padding:10px;background:#222;border:1px dashed #555;font-size:12px}
+#log{margin-top:15px;background:#000;padding:10px;border-radius:10px;min-height:80px;text-align:left;font-size:14px;max-height:200px;overflow-y:auto;}
 </style>
 </head>
 <body>
 <div class="card">
 <h2>📞 Anjali AI se baat karo</h2>
-<p style="font-size:12px;color:#aaa">Note: Ye ek AI voice assistant hai</p>
-
-<div class="ad">
-AD YAHAN AAYEGA<br>
-Google AdSense code yahan paste karna
-</div>
-
 <button id="startBtn">🎤 CALL START KARO</button>
 <button id="stopBtn" style="background:#444">🔴 CALL CUT KARO</button>
-
-<div id="log">Status: Taiyaar hai... button dabao</div>
-
-<div class="ad">
-AD 2 YAHAN AAYEGA
+<div id="log">Status: Taiyaar hai...</div>
 </div>
-</div>
-
 <script>
 const log = document.getElementById('log');
 const startBtn = document.getElementById('startBtn');
+let recognition; let isCalling = false;
 
-let recognition;
-let isCalling = false;
-
-if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    recognition = new SR();
-    recognition.lang = 'hi-IN';
-    recognition.interimResults = false;
-} else {
-    log.innerHTML = "Aapka browser support nahi karta, Chrome me kholo";
-}
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+recognition = new SR();
+recognition.lang = 'hi-IN';
+recognition.interimResults = false;
 
 function speak(text){
+    // FIX 1: Bolte time sunna band
+    try{ recognition.stop(); }catch(e){}
+    
     speechSynthesis.cancel();
     const utter = new SpeechSynthesisUtterance(text);
     utter.lang = 'hi-IN';
-    utter.rate = 0.95;
-    utter.pitch = 1.2; // ladki jaisi awaz ke liye pitch high
-    // Phone me jo female voice hai wo auto select hogi
+    utter.rate = 0.9;
+    utter.pitch = 1.4; // jyada ladki jaisi
+    
+    // Best female voice dhoondo
     const voices = speechSynthesis.getVoices();
-    const femaleVoice = voices.find(v => v.name.includes('Female') || v.name.includes('Heera') || v.lang === 'hi-IN');
-    if(femaleVoice) utter.voice = femaleVoice;
-    speechSynthesis.speak(utter);
+    let v = voices.find(x=>x.name.includes('Heera')) || voices.find(x=>x.name.includes('Google हिन्दी')) || voices.find(x=>x.lang==='hi-IN');
+    if(v) utter.voice = v;
+
     log.innerHTML += `<br><b>Anjali:</b> ${text}`;
+    log.scrollTop = log.scrollHeight;
+
+    utter.onend = () => {
+        // FIX 2: Bolne ke baad hi sunna start karo
+        if(isCalling){
+            try{ recognition.start(); }catch(e){}
+            startBtn.innerText = "🎧 Sun rahi hu... bolo";
+        }
+    };
+    speechSynthesis.speak(utter);
 }
 
 startBtn.onclick = () => {
+    speechSynthesis.getVoices(); // voice load karne ke liye
     if(!isCalling){
         isCalling = true;
         log.innerHTML = "Call connected... bolo hello";
-        speak("Hello, mai Anjali bol rahi hu, bolo kya haal hai?");
-        recognition.start();
+        setTimeout(()=> speak("Hello, mai Anjali bol rahi hu, bolo kya haal hai?"), 500);
         startBtn.innerText = "🎧 Sun rahi hu...";
     }
 };
 
 recognition.onresult = (e) => {
     const userText = e.results[0][0].transcript;
+    if(userText.length < 2) return; // khali awaz ignore
     log.innerHTML += `<br><b>Tum:</b> ${userText}`;
-
+    
     let reply = "";
     const t = userText.toLowerCase();
-    if(t.includes("hello") || t.includes("hi") || t.includes("namaste")){
-        reply = "Namaste jaan, kaise ho? Bolo kya help karu?";
+    if(t.includes("kaise ho") || t.includes("kya haal")){
+        reply = "Mai ekdum mast hu jaan, tum batao kya chal raha hai?";
+    } else if(t.includes("kaun ho")){
+        reply = "Mai Anjali hu, Jabalpur Life RP ki AI assistant.";
     } else if(t.includes("game")){
-        reply = "Game Jabalpur Life RP GitHub pe live hai, tum waha se khel sakte ho.";
-    } else if(t.includes("kaun ho") || t.includes("kya ho")){
-        reply = "Mai Anjali hu, ek AI assistant, Jabalpur Life RP ki taraf se aapki help ke liye.";
+        reply = "Game GitHub pe live hai, tum waha jaake khel sakte ho.";
     } else {
-        reply = "Samajh gayi, " + userText + ". Aur batao kya chahiye?";
+        reply = "Accha, " + userText + ", aur batao?";
     }
-    
-    setTimeout(()=> speak(reply), 500);
+    setTimeout(()=> speak(reply), 700);
 };
 
 recognition.onend = () => {
-    if(isCalling) recognition.start(); // call cut nahi hua to sunte raho
+    // Agar Anjali bol rahi hai to mic start mat karo (loop fix)
+    if(isCalling && !speechSynthesis.speaking){
+        try{ recognition.start(); }catch(e){}
+    }
 };
 
 document.getElementById('stopBtn').onclick = () => {
     isCalling = false;
-    recognition.stop();
+    try{ recognition.stop(); }catch(e){}
     speechSynthesis.cancel();
     log.innerHTML += "<br>Call cut ho gaya";
     startBtn.innerText = "🎤 CALL START KARO";
 };
-
-// Ad ke liye - yahan apna AdSense code paste kar dena
-// <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
 </script>
 </body>
 </html>
